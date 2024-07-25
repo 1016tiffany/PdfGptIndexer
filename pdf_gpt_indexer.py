@@ -1,7 +1,14 @@
 import textract
+import time
 from transformers import GPT2TokenizerFast
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings
+from langchain_community.llms import Ollama
+
+
+from langchain_community.embeddings import OllamaEmbeddings
+
+
 import os
 from langchain.vectorstores import FAISS
 from langchain.chat_models import ChatOpenAI
@@ -55,21 +62,26 @@ def process_pdf_folder(pdf_folder_name,txt_folder_name):
     return all_chunks
 
 # Create embeddings 
-os.environ["OPENAI_API_KEY"] = "<OPENAI_API_KEY>"
-embeddings = OpenAIEmbeddings()
+# os.environ["OPENAI_API_KEY"] = "<OPENAI_API_KEY>"
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
+MODEL = 'llama3'
+embeddings = OllamaEmbeddings(model=MODEL)
 
 # Store embeddings to vector db
-all_chunks = process_pdf_folder("./pdf", "./text");
+all_chunks = process_pdf_folder("./pdf", "./text")
 db =  FAISS.from_documents(all_chunks[0], embeddings) 
 for chunk in all_chunks[1:]:
     db_temp = FAISS.from_documents(chunk, embeddings)
-    db.merge_from(db_temp)
-    
+    db.merge_from(db_temp)   
 chat_history = []
-llm_model = ChatOpenAI(temperature=0.1, model="gpt-3.5-turbo")
+llm_model = Ollama(model=MODEL)
+
+# ChatOpenAI(temperature=0.1, model="gpt-3.5-turbo")
 qa = ConversationalRetrievalChain.from_llm(llm_model, db.as_retriever())
 
 while True:
+    query_start_time = time.time()
+
     # Get user query
     query = input("Enter a query (type 'exit' to quit): ")
     if query.lower() == "exit":      
@@ -78,5 +90,9 @@ while True:
     result = qa({"question": query, "chat_history": chat_history})
     chat_history.append((query, result['answer']))
     print(result['answer'])
+    query_end_time = time.time()
+    print(f"Query processed in {query_end_time - query_start_time:.2f} seconds.")
+
+
 
 print("Exited!!!")
