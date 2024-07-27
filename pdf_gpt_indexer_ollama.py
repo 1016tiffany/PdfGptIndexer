@@ -1,26 +1,13 @@
-print(-1)
-from transformers.dynamic_module_utils import get_imports
-def fixed_get_imports(filename: str | os.PathLike) -> list[str]:
-    imports = get_imports(filename)
-    if not certifi.is_available() and "certifi" in imports:
-        imports.remove("certifi")
-    
-    return imports
+import os
+import time
 import textract
 from transformers import GPT2TokenizerFast
-print(0)
-# import certifi
-# fix the imports
-
-import time
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.llms import Ollama
 from langchain.prompts import PromptTemplate
 
 from langchain_community.embeddings import OllamaEmbeddings
-import requests
-import os
-from langchain.vectorstores import FAISS
+from langchain_community.vectorstores import FAISS
 from langchain.chains import ConversationalRetrievalChain
 
 
@@ -32,15 +19,12 @@ os.environ['KMP_DUPLICATE_LIB_OK']='True'
 LLM = "mistral:7b"
 
 llm_model = Ollama(model=LLM)
-print(1)
-
 
 def process_pdf_folder(pdf_folder_name,txt_folder_name):
     # # Initialize tokenizer
     tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
     def count_tokens(text: str) -> int:
         return len(tokenizer.encode(text))
-    print(2)
     # Initialize text splitter
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size = 512,
@@ -50,7 +34,7 @@ def process_pdf_folder(pdf_folder_name,txt_folder_name):
 
     # Array to hold all chunks
     all_chunks = []
-
+  
     # Iterate over all files in the folder
     for filename in os.listdir(pdf_folder_name):
         # Only process PDF files
@@ -77,15 +61,25 @@ def process_pdf_folder(pdf_folder_name,txt_folder_name):
 
             # Add chunks to the array
             all_chunks.append(chunks)
-
+    print(f'{all_chunks} here is all chunks')
     # Return the array of chunks
     return all_chunks
-
+    
 # Create embeddings 
-# os.environ["OPENAI_API_KEY"] = "<OPENAI_API_KEY>"
 # os.environ['KMP_DUPLICATE_LIB_OK']='True'
 MODEL = 'mxbai-embed-large'
 embeddings = OllamaEmbeddings(model=MODEL)
+
+# Embeddings test
+# Example text
+text_snippet = "Your text snippet here."
+
+# Generate embeddings
+text_embedding = embeddings._embed(text_snippet)
+
+# Print first 10 dimensions of the embedding to get a feel
+print(text_embedding[0][:10])
+
 
 # Store embeddings to vector db
 all_chunks = process_pdf_folder("./pdf", "./text")
@@ -99,7 +93,7 @@ chat_history = []
 qa = ConversationalRetrievalChain.from_llm(llm_model, db.as_retriever())
 
 while True:
-    # query_start_time = time.time()
+    query_start_time = time.time()
 
     # Get user query
     query = input("Enter a query (type 'exit' to quit): ")
@@ -109,8 +103,8 @@ while True:
     result = qa({"question": query, "chat_history": chat_history})
     chat_history.append((query, result['answer']))
     print(result['answer'])
-    # query_end_time = time.time()
-    # print(f"Query processed in {query_end_time - query_start_time:.2f} seconds.")
+    query_end_time = time.time()
+    print(f"Query processed in {query_end_time - query_start_time:.2f} seconds.")
 
 
 

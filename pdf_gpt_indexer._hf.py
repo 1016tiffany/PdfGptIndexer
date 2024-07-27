@@ -1,5 +1,6 @@
 import textract
 import time
+import os
 from transformers import GPT2TokenizerFast
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.llms import Ollama
@@ -20,6 +21,7 @@ import os
 from langchain.vectorstores import FAISS
 from langchain.chains import ConversationalRetrievalChain
 import torch
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 #mistral_models_path = Path.home().joinpath(local_path, '7B-Instruct-v0.3')
@@ -36,6 +38,7 @@ def fixed_get_imports(filename: str | os.PathLike) -> list[str]:
     imports = get_imports(filename)
     if not torch.cuda.is_available() and "flash_attn" in imports:
         imports.remove("flash_attn")
+    
     return imports
 
 # create model
@@ -50,12 +53,12 @@ with patch("transformers.dynamic_module_utils.get_imports", fixed_get_imports):
              torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
              device_map='auto' if torch.cuda.is_available() else None,
              trust_remote_code=True,
-             token="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"
+             token="TOKEN"
              )
     tokenizer = AutoTokenizer.from_pretrained(
                  model_name,
                  trust_remote_code=True,
-                 token="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"
+                 token="TOKEN"
              )
 print(type(llm_model))
 #llm_model = AutoModelForCausalLM.from_pretrained("Alibaba-NLP/gte-Qwen2-1.5B-instruct", trust_remote_code=True)
